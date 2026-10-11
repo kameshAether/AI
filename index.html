@@ -108,7 +108,9 @@ class Body {
       }
       if (Math.abs(this.vy) > 0.5) playSound('thud');
       this.vy = -this.vy * RESTITUTION * 0.6;
-      this.vx *= 0.9; this.angVel *= 0.8;
+      // rolling friction (horizontal): much gentler than the old 0.9 kill
+      const rollFriction = this.type === 'bird' ? 0.995 : 0.97;
+      this.vx *= rollFriction; this.angVel *= 0.8;
       if (Math.abs(this.vy) < 0.6) this.vy = 0;
       this.onGround = true;
     } else this.onGround = false;
@@ -144,6 +146,9 @@ function collide(a, b) {
   const relVx = b.vx - a.vx, relVy = b.vy - a.vy;
 
   // resolve along axis of least penetration
+  // wake sleepers on contact
+  a.sleep = false; a.sleepTimer = 0;
+  b.sleep = false; b.sleepTimer = 0;
   if (px < py) {
     const dir = dx > 0 ? 1 : -1;
     const overlap = px;
@@ -445,6 +450,8 @@ function nextBird() {
   // remove the previous bird from the physics world
   if (currentBird) bodies = bodies.filter(b => b !== currentBird);
   if (birdsQueue.length === 0) { currentBird = null; return; }
+  // return camera to the slingshot for the next shot
+  cameraTargetX = 0;
   const color = birdsQueue.shift();
   currentBird = new Body(SLING.armX, SLING.armY, 34, 34, { material: 'bird', type: 'bird', hp: 99999 });
   currentBird.color = color;
